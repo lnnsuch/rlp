@@ -701,36 +701,21 @@ func (s *Stream) uint(maxbits int) (uint64, error) {
 
 
 func (s *Stream) int(maxbits int) (int64, error) {
-	kind, size, err := s.Kind()
+	b, err := s.readByte()
 	if err != nil {
 		return 0, err
 	}
-	switch kind {
-	case Byte:
-		if s.byteval == 0 {
-			return 0, ErrCanonInt
-		}
-		s.kind = -1 // rearm Kind
-		return int64(s.byteval), nil
-	case String:
-		if size > uint64(maxbits/8) {
-			return 0, errUintOverflow
-		}
-		v, err := s.readInt(byte(size))
-		switch {
-		case err == ErrCanonSize:
-			// Adjust error because we're not reading a size right now.
-			return 0, ErrCanonInt
-		case err != nil:
-			return 0, err
-		case size > 0 && v < (1 << 6) && v >= -1 << 6:
-			return 0, ErrCanonSize
-		default:
-			return v, nil
-		}
-	default:
-		return 0, ErrExpectedString
+	if b == 0x80 {
+		return 0, nil
 	}
+	i, err := s.uint(maxbits)
+	if err != nil {
+		return 0, err
+	}
+	if b == 0x01 {
+		return int64(i), nil
+	}
+	return int64(i) * -1, nil
 }
 
 // Bool reads an RLP string of up to 1 byte and returns its contents
@@ -985,32 +970,6 @@ func (s *Stream) readUint(size byte) (uint64, error) {
 			return 0, ErrCanonSize
 		}
 		return binary.BigEndian.Uint64(s.uintbuf), nil
-	}
-}
-
-func (s *Stream) readInt(size byte) (int64, error) {
-	switch size {
-	case 0:
-		s.kind = -1 // rearm Kind
-		return 0, nil
-	case 1:
-		b, err := s.readByte()
-		return int64(b), err
-	default:
-		start := int(8 - size)
-		for i := 0; i < start; i++ {
-			s.uintbuf[i] = 0
-		}
-		if err := s.readFull(s.uintbuf[start:]); err != nil {
-			return 0, err
-		}
-		if s.uintbuf[start] == 0 {
-			// Note: readUint is also used to decode integer
-			// values. The error needs to be adjusted to become
-			// ErrCanonInt in this case.
-			return 0, ErrCanonSize
-		}
-		return int64(binary.BigEndian.Uint64(s.uintbuf)), nil
 	}
 }
 

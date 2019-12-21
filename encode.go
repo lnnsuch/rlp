@@ -362,6 +362,10 @@ func writeRawValue(val reflect.Value, w *encbuf) error {
 
 func writeUint(val reflect.Value, w *encbuf) error {
 	i := val.Uint()
+	return parseUint(i, w)
+}
+
+func parseUint(i uint64, w *encbuf) error {
 	if i == 0 {
 		w.str = append(w.str, 0x80)
 	} else if i < 128 {
@@ -380,11 +384,23 @@ func writeInt(val reflect.Value, w *encbuf) error {
 	i := val.Int()
 	if i == 0 {
 		w.str = append(w.str, 0x80)
-	} else if i < 128 && i > 0 {
-		w.str = append(w.str, byte(i))
+		return nil
+	}
+	var ui uint64
+	bit := byte(0x01)
+	if i < 0 {
+		bit = byte(0x00)
+		ui = uint64(i * -1)
+	} else {
+		ui = uint64(i)
+	}
+	w.str = append(w.str, bit)
+	if ui < 128 {
+		// fits single byte
+		w.str = append(w.str, byte(ui))
 	} else {
 		// TODO: encode int to w.str directly
-		s := putInt(w.sizebuf[1:], i)
+		s := putUint(w.sizebuf[1:], ui)
 		w.sizebuf[0] = 0x80 + byte(s)
 		w.str = append(w.str, w.sizebuf[:s+1]...)
 	}
@@ -624,32 +640,32 @@ func putInt(b []byte, i int64) (size int) {
 	case i < (1 << 8) && i > 0:
 		b[0] = byte(i)
 		return 1
-	case i < (1 << 7) && i >= -1 << 7:
+	case i < (1 << 7) && i > -1 << 7:
 		b[0] = byte(i)
 		return 1
-	case i < (1 << 15) && i >= -1 << 15:
+	case i < (1 << 15) && i > -1 << 15:
 		b[0] = byte(i >> 8)
 		b[1] = byte(i)
 		return 2
-	case i < (1 << 23) && i >= -1 << 23:
+	case i < (1 << 23) && i > -1 << 23:
 		b[0] = byte(i >> 16)
 		b[1] = byte(i >> 8)
 		b[2] = byte(i)
 		return 3
-	case i < (1 << 31) && i >= -1 << 31:
+	case i < (1 << 31) && i > -1 << 31:
 		b[0] = byte(i >> 24)
 		b[1] = byte(i >> 16)
 		b[2] = byte(i >> 8)
 		b[3] = byte(i)
 		return 4
-	case i < (1 << 39) && i >= -1 << 39:
+	case i < (1 << 39) && i > -1 << 39:
 		b[0] = byte(i >> 32)
 		b[1] = byte(i >> 24)
 		b[2] = byte(i >> 16)
 		b[3] = byte(i >> 8)
 		b[4] = byte(i)
 		return 5
-	case i < (1 << 47) && i >= -1 << 47:
+	case i < (1 << 47) && i > -1 << 47:
 		b[0] = byte(i >> 40)
 		b[1] = byte(i >> 32)
 		b[2] = byte(i >> 24)
@@ -657,7 +673,7 @@ func putInt(b []byte, i int64) (size int) {
 		b[4] = byte(i >> 8)
 		b[5] = byte(i)
 		return 6
-	case i < (1 << 55)  && i >= -1 << 55:
+	case i < (1 << 55)  && i > -1 << 55:
 		b[0] = byte(i >> 48)
 		b[1] = byte(i >> 40)
 		b[2] = byte(i >> 32)

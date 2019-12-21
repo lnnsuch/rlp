@@ -391,23 +391,34 @@ var decodeTests = []decodeTest{
 
 	{input:"8180", ptr:new(uint8), value:uint8(128)},
 	{input:"8181", ptr:new(uint8), value:uint8(129)},
-	{input:"7F", ptr:new(int), value:127},
+	{input:"017F", ptr:new(int), value:127},
 
 	{input:"80", ptr:new(int32), value:int32(0x0)},
-	{input:"817F", ptr:new(int8), value:int8(127)},
-	{input:"40", ptr:new(int8), value:int8(1<<6)},
-	{input:"3F", ptr:new(int8), value:int8(1<<6)-1},
-	{input:"81C1", ptr:new(int8), value:int8(-1<<6)+1},
-	{input:"8180", ptr:new(int), value:128},
+	{input:"0140", ptr:new(int8), value:int8(1<<6)},
+	{input:"013F", ptr:new(int8), value:int8(1<<6)-1},
+	{input:"018180", ptr:new(int), value:128},
 
-	{input:"817F", ptr:new(int8), value:int8(math.MaxInt8)},
-	{input:"8180", ptr:new(int8), value:int8(math.MinInt8)},
-	{input:"827FFF", ptr:new(int16), value:int16(math.MaxInt16)},
-	{input:"828000", ptr:new(int16), value:int16(math.MinInt16)},
-	{input:"847FFFFFFF", ptr:new(int32), value:int32(math.MaxInt32)},
-	{input:"8480000000", ptr:new(int32), value:int32(math.MinInt32)},
-	{input:"887FFFFFFFFFFFFFFF", ptr:new(int64), value:int64(math.MaxInt64)},
-	{input:"888000000000000000", ptr:new(int64), value:int64(math.MinInt64)},
+	{input:"80",ptr:new(int8), value:int8(0)},
+	{input:"017F",ptr:new(int8),value:int8(127)},
+	{input:"018180",ptr:new(int),value:128},
+	{input:"017F",ptr:new(int),value:127},
+	{input:"018181",ptr:new(int),value:129},
+	{input:"017F",ptr:new(int8),value:int8(127)},
+	{input:"003F",ptr:new(int8),value:int8(-1<<6)+1},
+	{input:"017F",ptr:new(int8),value:int8(math.MaxInt8)},
+	{input:"008180",ptr:new(int8),value:int8(math.MinInt8)},
+	{input:"01827FFF",ptr:new(int16),value:int16(math.MaxInt16)},
+	{input:"00828000",ptr:new(int16),value:int16(math.MinInt16)},
+	{input:"01847FFFFFFF",ptr:new(int32),value:int32(math.MaxInt32)},
+	{input:"008480000000",ptr:new(int32),value:int32(math.MinInt32)},
+	{input:"01887FFFFFFFFFFFFFFF",ptr:new(int64),value:int64(math.MaxInt64)},
+	{input:"00888000000000000000",ptr:new(int64),value:int64(math.MinInt64)},
+	{input:"00828000",ptr:new(int64),value:int64(-1 << 15)},
+	{input:"0083800000",ptr:new(int64),value:int64(-1 << 23)},
+	{input:"008480000000",ptr:new(int64),value:int64(-1 << 31)},
+	{input:"00858000000000",ptr:new(int64),value:int64(-1 << 39)},
+	{input:"0086800000000000",ptr:new(int64),value:int64(-1 << 47)},
+	{input:"008780000000000000",ptr:new(int64),value:int64(-1 << 55)},
 
 
 	// integers
@@ -523,7 +534,7 @@ var decodeTests = []decodeTest{
 		error: "rlp: expected input string or byte for uint, decoding into (rlp.recstruct).Child.I",
 	},
 	{
-		input: "C103",
+		input: "C20103",
 		ptr:   new(intField),
 		value:intField{X:3},
 	},
@@ -622,6 +633,7 @@ var decodeTests = []decodeTest{
 	// pointers
 	{input: "00", ptr: new(*[]byte), value: &[]byte{0}},
 	{input: "80", ptr: new(*uint), value: uintp(0)},
+	{input: "80", ptr: new(*int), value: intp(0)},
 	{input: "C0", ptr: new(*uint), error: "rlp: expected input string or byte for uint"},
 	{input: "07", ptr: new(*uint), value: uintp(7)},
 	{input: "817F", ptr: new(*uint), error: "rlp: non-canonical size information for uint"},
@@ -654,6 +666,7 @@ var decodeTests = []decodeTest{
 }
 
 func uintp(i uint) *uint { return &i }
+func intp(i int) *int { return &i }
 
 func runTests(t *testing.T, decode func([]byte, interface{}) error) {
 	for i, test := range decodeTests {
